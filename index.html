@@ -1,0 +1,389 @@
+<html>
+	<head>
+		<title>Gami - Language Learning</title>
+		<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+	</head>
+	<style>
+		* {
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			box-sizing: border-box;
+		}
+		body {
+			overflow: hidden;
+			padding: 20px 20px 150px 20px;
+		}
+		h1 {
+			font-size: 35px;
+			/* margin-top: 90px; */
+		}
+		p.question {
+			font-size: 35px;
+		}
+		main {
+			width: 100%;
+			height: 100%;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			flex-direction: column;
+			gap: 20px;
+		}
+		input {
+			padding: 10px;
+			width: 100%;
+		}
+		input[name='answer'] {
+			color: green;
+		}
+		.highlight-box {
+			padding: 10px;
+			border: 1px solid;
+			width: 100%;
+			overflow-x: auto;
+			line-height: 1.8; /* Improve readability of highlighted lines */
+		}
+		span.char-highlight {
+			/* More specific selector for character spans */
+			display: inline-block; /* Ensures spans flow correctly */
+			/* font-size: 20px; */ /* Controlled by parent or input style */
+		}
+		.correct {
+			background-color: rgba(0, 255, 0, 0.3); /* Lighter green */
+			color: #006400; /* Darker green text */
+		}
+		.incorrect {
+			background-color: rgba(255, 0, 0, 0.3); /* Lighter red */
+			color: #8b0000; /* Darker red text */
+			/* text-decoration: underline wavy red 1px;  */
+		}
+		#dictionary {
+			padding: 0;
+			border: none;
+			max-width: none;
+			max-height: none;
+			background: transparent;
+		}
+		#dictionary::backdrop {
+			display: none;
+		}
+		.algo-button.active-algo {
+			background-color: #d1d5db; /* gray-300 */
+			font-weight: bold;
+		}
+		.info-text {
+			font-style: italic;
+			color: #555;
+			margin-bottom: 10px;
+			display: block;
+		}
+	</style>
+
+	<body>
+		<div class="w-full flex justify-between">
+			<h1 id="part-label">Part</h1>
+			<h1 id="dictionary-toggle" class="bg-gray-50 rounded-xl p-4 cursor-pointer">&#9664; 📖</h1>
+		</div>
+		<main class="max-w-7xl m-auto">
+			<p id="question" class="question"></p>
+
+			<div class="w-full">
+				<label class="">Convert to romanji</label>
+				<input class="my-2 border" type="text" name="response" placeholder="koko wa kotae..." />
+			</div>
+
+			<div id="highlight-container" class="w-full" hidden>
+				<label id="highlight-label" class=""></label>
+				<div class="highlight-box"></div>
+			</div>
+			<div id="answer-box" class="w-full" hidden>
+				<label class="">Correct answer</label>
+				<input type="text" name="answer" class="border" disabled />
+			</div>
+			<div id="english-box" class="w-full" hidden>
+				<label class="">English answer</label>
+				<input type="text" name="english-answser" class="border" disabled />
+			</div>
+			<div class="flex flex-row justify-center gap-12">
+				<button id="check" type="submit" class="border px-8 py-2 cursor-pointer hover:bg-gray-100">
+					Check
+				</button>
+				<button
+					id="next"
+					type="submit"
+					class="border px-8 py-2 cursor-pointer hover:bg-gray-100"
+					hidden
+				>
+					Next
+				</button>
+			</div>
+		</main>
+	</body>
+	<dialog id="dictionary" class="">
+		<div
+			class="fixed top-0 right-0 h-screen w-80 bg-white shadow-xl border-l border-gray-200 p-6 flex flex-col z-50"
+		>
+			<div class="flex justify-between items-center mb-4">
+				<h2 class="text-2xl font-semibold text-gray-800 mt-2">Kanji Dictionary</h2>
+				<button
+					id="close-dictionary"
+					class="text-gray-500 hover:text-gray-800 text-4xl font-bold outline-none p-4 cursor-pointer"
+				>
+					<span>&times;</span>
+				</button>
+			</div>
+			<div id="dictionary-list" class="flex-grow overflow-y-auto">
+				<p class="text-gray-600 mb-4">
+					Try not to reference this dictionary too often, focus on quickly memorizing them.
+				</p>
+			</div>
+		</div>
+	</dialog>
+	<script type="module">
+		// Create a dummy story.js if you don't have one for testing
+		// e.g., create story.js with:
+		// export const story = [
+		//   { sentence: "こんにちは世界", romanji: "Konnichiwa sekai.", definitions: [{jp:"世界", romanji:"sekai", meaning:"world"}] },
+		//   { sentence: "これはペンです。", romanji: "Kore wa pen desu. Hai.", definitions: [] }
+		// ];
+		import { story } from './story.js' // Make sure story.js exists
+
+		const dictionaryNode = document.querySelector('#dictionary')
+		const dictionaryListNode = document.querySelector('#dictionary-list')
+		const questionNode = document.querySelector('#question')
+		const partLabel = document.querySelector('#part-label')
+		const dictionaryToggleBtn = document.querySelector('#dictionary-toggle')
+		const checkButton = document.querySelector('#check')
+		const nextButton = document.querySelector('#next')
+		const closeButton = document.querySelector('#close-dictionary')
+		const responseInput = document.querySelector('[name="response"]')
+		const highlightBox = document.querySelector('.highlight-box')
+		const highlightContainer = document.querySelector('#highlight-container')
+		const highlightLabel = document.querySelector('#highlight-label')
+		const answerBox = document.querySelector('#answer-box')
+		const englishBox = document.querySelector('#english-box')
+		const englishAnswer = document.querySelector('[name="english-answer"]')
+
+		const correctAnswerInput = document.querySelector('[name="answer"]')
+
+		nextButton.addEventListener('click', nextPart)
+		checkButton.addEventListener('click', checkAnswer)
+		dictionaryToggleBtn.addEventListener('click', toggleDictionary)
+		closeButton.addEventListener('click', closeDictionary)
+		responseInput.addEventListener('keypress', function (event) {
+			if (event.key === 'Enter') {
+				checkButton.click()
+			}
+		})
+
+		let params = new URLSearchParams(document.location.search)
+		let partNumber = parseInt(params.get('part') || 1)
+		let partData = story[partNumber - 1]
+
+		if (!partData) {
+			// Fallback if partNumber is out of bounds
+			partData = story[0]
+			// Optionally, update URL or notify user
+		}
+
+		startPart(partData)
+
+		function startPart(data) {
+			populateDictionary(data.definitions)
+			questionNode.textContent = data.sentence
+			partLabel.textContent = 'Part ' + partNumber
+			correctAnswerInput.value = data.romanji
+			englishAnswer.value = data.english
+
+			// Reset for new part
+			responseInput.value = ''
+			highlightContainer.hidden = true
+			highlightBox.innerHTML = ''
+			answerBox.hidden = true
+			nextButton.hidden = true
+			englishBox.hidden = true
+		}
+
+		function revealAnswer() {
+			answerBox.hidden = false
+		}
+
+		function nextPart() {
+			// Make sure we aren't on the last part or in the negative part number for whatever reason
+			if (partNumber != story.length - 1 && partNumber >= 0) {
+				partNumber += 1
+				partData = story[partNumber - 1]
+				startPart(partData)
+			}
+		}
+
+		// --- Algorithm Selection ---
+		let currentAlgorithm = 'char-by-char' // Default
+
+		function splitSentences(text) {
+			if (!text || text.trim() === '') return []
+			const sentences = []
+			let currentSentenceStart = 0
+			for (let i = 0; i < text.length; i++) {
+				if (['.', '!', '?'].includes(text[i])) {
+					const sentence = text.substring(currentSentenceStart, i + 1).trim()
+					if (sentence.length > 0) {
+						sentences.push(sentence)
+					}
+					currentSentenceStart = i + 1
+				}
+			}
+			if (currentSentenceStart < text.length) {
+				const remainingSentence = text.substring(currentSentenceStart).trim()
+				if (remainingSentence.length > 0) {
+					sentences.push(remainingSentence)
+				}
+			}
+			if (sentences.length === 0 && text.trim() !== '') {
+				sentences.push(text.trim())
+			}
+			return sentences
+		}
+
+		function highlightSentenceCharacters(responseSentence, correctSentence) {
+			const highlightedNodes = []
+			const resText = responseSentence || ''
+			const ansText = correctSentence || ''
+			const maxLength = Math.max(resText.length, ansText.length)
+
+			for (let i = 0; i < maxLength; i++) {
+				const span = document.createElement('span')
+				span.classList.add('char-highlight') // Apply base class for char spans
+				const resChar = resText[i]
+				const ansChar = ansText[i]
+
+				if (resChar !== undefined) {
+					span.innerHTML = resChar === ' ' ? '&nbsp;' : resChar
+					if (ansChar !== undefined && resChar.toLowerCase() === ansChar.toLowerCase()) {
+						span.classList.add('correct')
+					} else {
+						span.classList.add('incorrect')
+					}
+				} else {
+					span.innerHTML = ansChar === ' ' ? '&nbsp;' : ansChar
+					span.classList.add('incorrect')
+				}
+				highlightedNodes.push(span)
+			}
+			return highlightedNodes
+		}
+
+		function checkAnswer() {
+			let correctAnswerText = partData.romanji
+			let responseText = responseInput.value
+			highlightContainer.hidden = false
+			answerBox.hidden = true
+
+			console.log('adawdaw')
+			// Only do these checks if it's not a re-render from algo switch
+			if (!responseText || responseText.trim() === '') {
+				// Optional: Provide feedback for empty input if desired
+				// For now, just return as per original logic
+				highlightContainer.hidden = true
+				highlightBox.innerHTML = ''
+				answerBox.hidden = true
+				// algoSelectorContainer.hidden = true; // Hide if input is empty
+				return
+			}
+
+			// When they right
+			if (correctAnswerText.toLowerCase() === responseText.toLowerCase()) {
+				highlightLabel.textContent = 'Correct!'
+				highlightBox.hidden = false
+				englishBox.hidden = false
+				answerBox.hidden = true // No need to show correct answer if they got it right
+				// algoSelectorContainer.hidden = true; // Hide if correct
+				// Add logic for "next arrow" or progression here
+				nextButton.hidden = false
+			}
+			// When they wrong
+			else {
+				revealAnswer()
+				highlightLabel.textContent = "Something's not right..."
+			}
+
+			// If wrong or a re-check
+			highlightBox.innerHTML = ''
+			highlightBox.hidden = false
+
+			let answerSentences = splitSentences(correctAnswerText)
+			let responseSentences = splitSentences(responseText)
+
+			const numTotalSentencesToDisplay = Math.max(answerSentences.length, responseSentences.length)
+
+			for (let i = 0; i < numTotalSentencesToDisplay; i++) {
+				const ansSentence = answerSentences[i]
+				const resSentence = responseSentences[i]
+
+				const currentResponseSentence = resSentence === undefined ? '' : resSentence
+				const currentCorrectSentence = ansSentence === undefined ? '' : ansSentence
+
+				// For Levenshtein, we'll just use char-by-char for visual, after showing info.
+				// if (currentAlgorithm === 'char-by-char' || currentAlgorithm === 'levenshtein') {
+				const sentenceNodes = highlightSentenceCharacters(
+					currentResponseSentence,
+					currentCorrectSentence
+				)
+				sentenceNodes.forEach((node) => highlightBox.appendChild(node))
+
+				// }
+
+				if (i < numTotalSentencesToDisplay - 1) {
+					if (currentResponseSentence.length > 0 || currentCorrectSentence.length > 0) {
+						const separator = document.createElement('span')
+						separator.innerHTML = '&nbsp;'
+						separator.classList.add('char-highlight') // Ensure it flows like other chars
+						highlightBox.appendChild(separator)
+					}
+				}
+			}
+		}
+
+		function toggleDictionary() {
+			if (dictionaryNode.open) {
+				closeDictionary()
+			} else {
+				openDictionary()
+			}
+		}
+		function openDictionary() {
+			dictionaryNode.showModal() // Or .show() if you prefer non-modal
+			dictionaryToggleBtn.innerHTML = '📖 &#9654;' // Book, Right arrow
+		}
+		function closeDictionary() {
+			dictionaryNode.close()
+			dictionaryToggleBtn.innerHTML = '&#9664; 📖' // Left arrow, book
+		}
+
+		function populateDictionary(dict) {
+			// Clear existing non-static content if any (e.g. if called multiple times)
+			const staticContent = dictionaryListNode.querySelector('p.text-gray-600')
+			dictionaryListNode.innerHTML = ''
+			if (staticContent) dictionaryListNode.appendChild(staticContent)
+			// Shuffle the dict so users don't memorize the order
+			dict.sort(() => Math.random() - 0.5)
+
+			dict.forEach((term) => {
+				const template = `<div class="mb-4"><span><span class="text-2xl ">${term.jp}</span> <span class='italic'>${term.romanji}</span> (${term.meaning})</span></div>`
+				const tempContainer = document.createElement('div')
+				tempContainer.innerHTML = template
+				const node = tempContainer.firstElementChild
+				dictionaryListNode.appendChild(node)
+			})
+		}
+
+		document.addEventListener('click', function (event) {
+			if (
+				dictionaryNode.open &&
+				!dictionaryNode.firstElementChild.contains(event.target) && // Check against the dialog's content div
+				event.target !== dictionaryToggleBtn
+			) {
+				closeDictionary()
+			}
+		})
+	</script>
+</html>
