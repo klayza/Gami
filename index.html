@@ -1,6 +1,7 @@
 <html>
 	<head>
 		<title>Gami - Language Learning</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 	</head>
 	<style>
@@ -9,12 +10,11 @@
 			box-sizing: border-box;
 		}
 		body {
-			overflow: hidden;
+			overflow: hidden; /* Consider changing to auto if scroll becomes an issue on mobile with dialogs open */
 			padding: 20px 20px 150px 20px;
 		}
 		h1 {
 			font-size: 35px;
-			/* margin-top: 90px; */
 		}
 		p.question {
 			font-size: 35px;
@@ -40,51 +40,52 @@
 			border: 1px solid;
 			width: 100%;
 			overflow-x: auto;
-			line-height: 1.8; /* Improve readability of highlighted lines */
+			line-height: 1.8;
 		}
 		span.char-highlight {
-			/* More specific selector for character spans */
-			display: inline-block; /* Ensures spans flow correctly */
-			/* font-size: 20px; */ /* Controlled by parent or input style */
+			display: inline-block;
 		}
 		.correct {
-			background-color: rgba(0, 255, 0, 0.3); /* Lighter green */
-			color: #006400; /* Darker green text */
+			background-color: rgba(0, 255, 0, 0.3);
+			color: #006400;
 		}
 		.incorrect {
-			background-color: rgba(255, 0, 0, 0.3); /* Lighter red */
-			color: #8b0000; /* Darker red text */
-			/* text-decoration: underline wavy red 1px;  */
+			background-color: rgba(255, 0, 0, 0.3);
+			color: #8b0000;
 		}
-		#dictionary {
+		#dictionary,
+		#parts-dialog {
+			/* Apply common dialog base styles */
 			padding: 0;
 			border: none;
-			max-width: none;
-			max-height: none;
-			background: transparent;
+			max-width: none; /* Allow content to define width up to panel's max */
+			max-height: none; /* Allow content to define height up to panel's max */
+			background: transparent; /* Dialog itself is transparent, panel inside has bg */
 		}
-		#dictionary::backdrop {
-			display: none;
-		}
-		.algo-button.active-algo {
-			background-color: #d1d5db; /* gray-300 */
-			font-weight: bold;
-		}
-		.info-text {
-			font-style: italic;
-			color: #555;
-			margin-bottom: 10px;
-			display: block;
+		#dictionary::backdrop,
+		#parts-dialog::backdrop {
+			/* display: none; */ /* Default backdrop is fine, or customize if needed */
+			background-color: rgba(0, 0, 0, 0.3); /* Subtle backdrop */
 		}
 	</style>
 
 	<body>
-		<div class="w-full flex justify-between">
-			<h1 id="part-label">Part</h1>
-			<h1 id="dictionary-toggle" class="bg-gray-50 rounded-xl p-4 cursor-pointer">&#9664; 📖</h1>
+		<div class="w-full flex justify-between items-center">
+			<h1
+				id="part-label"
+				class="bg-gray-50 rounded-xl p-4 cursor-pointer text-xl sm:text-2xl order-1"
+			>
+				Part
+			</h1>
+			<h1
+				id="dictionary-toggle"
+				class="bg-gray-50 rounded-xl p-4 cursor-pointer text-xl sm:text-2xl order-2"
+			>
+				&#9664; 📖
+			</h1>
 		</div>
 		<main class="max-w-7xl m-auto">
-			<p id="question" class="question"></p>
+			<p id="question" class="question text-center"></p>
 
 			<div class="w-full">
 				<label class="">Convert to romanji</label>
@@ -103,14 +104,18 @@
 				<label class="">English answer</label>
 				<input type="text" name="english-answer" class="border" disabled />
 			</div>
-			<div class="flex flex-row justify-center gap-12">
-				<button id="check" type="submit" class="border px-8 py-2 cursor-pointer hover:bg-gray-100">
+			<div class="flex flex-col sm:flex-row justify-center gap-4 sm:gap-12 w-full">
+				<button
+					id="check"
+					type="submit"
+					class="border px-8 py-2 cursor-pointer hover:bg-gray-100 w-full sm:w-auto"
+				>
 					Check
 				</button>
 				<button
 					id="next"
 					type="submit"
-					class="border px-8 py-2 cursor-pointer hover:bg-gray-100"
+					class="border px-8 py-2 cursor-pointer hover:bg-gray-100 w-full sm:w-auto"
 					hidden
 				>
 					Next
@@ -118,9 +123,10 @@
 			</div>
 		</main>
 	</body>
-	<dialog id="dictionary" class="">
+
+	<dialog id="dictionary">
 		<div
-			class="fixed top-0 right-0 h-screen w-80 bg-white shadow-xl border-l border-gray-200 p-6 flex flex-col z-50"
+			class="fixed top-0 right-0 h-screen w-full sm:w-80 bg-white shadow-xl border-l border-gray-200 p-6 flex flex-col z-50"
 		>
 			<div class="flex justify-between items-center mb-4">
 				<h2 class="text-2xl font-semibold text-gray-800 mt-2">Kanji Dictionary</h2>
@@ -138,23 +144,50 @@
 			</div>
 		</div>
 	</dialog>
+
+	<dialog id="parts-dialog">
+		<div
+			class="fixed top-0 left-0 h-screen w-full sm:w-80 bg-white shadow-xl border-r border-gray-200 p-6 pt-12 pb-24 flex flex-col z-50"
+		>
+			<div class="flex justify-between relative items-center mb-12">
+				<h2
+					id="current-part-in-dialog-title"
+					class="text-3xl sm:text-4xl font-semibold text-center w-full"
+				></h2>
+				<button
+					id="close-parts-dialog"
+					class="text-gray-500 hover:text-gray-800 text-4xl font-bold outline-none p-4 cursor-pointer absolute right-0"
+				>
+					<span>&times;</span>
+				</button>
+			</div>
+			<div
+				id="parts-list-items"
+				class="flex-grow overflow-y-auto flex flex-col justify-center"
+			></div>
+		</div>
+	</dialog>
+
 	<script type="module">
-		// Create a dummy story.js if you don't have one for testing
-		// e.g., create story.js with:
-		// export const story = [
-		//   { sentence: "こんにちは世界", romanji: "Konnichiwa sekai.", definitions: [{jp:"世界", romanji:"sekai", meaning:"world"}] },
-		//   { sentence: "これはペンです。", romanji: "Kore wa pen desu. Hai.", definitions: [] }
-		// ];
-		import { story } from './story.js' // Make sure story.js exists
+		// Ensure story.js exists and exports 'story' array
+		// Example: export const story = [ { sentence: "...", romanji: "...", english: "...", definitions: [...] }, ... ];
+		import { story } from './story.js'
 
 		const dictionaryNode = document.querySelector('#dictionary')
 		const dictionaryListNode = document.querySelector('#dictionary-list')
-		const questionNode = document.querySelector('#question')
-		const partLabel = document.querySelector('#part-label')
 		const dictionaryToggleBtn = document.querySelector('#dictionary-toggle')
+		const closeDictionaryBtn = document.querySelector('#close-dictionary')
+
+		// New selectors for Parts Dialog
+		const partsDialogNode = document.querySelector('#parts-dialog')
+		const partLabelToggle = document.querySelector('#part-label') // This is the H1 that shows "Part X"
+		const closePartsDialogBtn = document.querySelector('#close-parts-dialog')
+		const currentPartInDialogTitle = document.querySelector('#current-part-in-dialog-title')
+		const partsListItemsContainer = document.querySelector('#parts-list-items')
+
+		const questionNode = document.querySelector('#question')
 		const checkButton = document.querySelector('#check')
 		const nextButton = document.querySelector('#next')
-		const closeButton = document.querySelector('#close-dictionary')
 		const responseInput = document.querySelector('[name="response"]')
 		const highlightBox = document.querySelector('.highlight-box')
 		const highlightContainer = document.querySelector('#highlight-container')
@@ -162,87 +195,240 @@
 		const answerBox = document.querySelector('#answer-box')
 		const englishBox = document.querySelector('#english-box')
 		const englishAnswer = document.querySelector('[name="english-answer"]')
-
 		const correctAnswerInput = document.querySelector('[name="answer"]')
 
-		nextButton.addEventListener('click', nextPart)
-		checkButton.addEventListener('click', checkAnswer)
-		dictionaryToggleBtn.addEventListener('click', toggleDictionary)
-		closeButton.addEventListener('click', closeDictionary)
-		responseInput.addEventListener('keypress', function (event) {
-			if (event.key === 'Enter') {
-				checkButton.click()
+		// --- Cookie Functions ---
+		function getCompletedPartsCookie() {
+			const name = 'completedParts='
+			const decodedCookie = decodeURIComponent(document.cookie)
+			const ca = decodedCookie.split(';')
+			for (let i = 0; i < ca.length; i++) {
+				let c = ca[i]
+				while (c.charAt(0) === ' ') {
+					c = c.substring(1)
+				}
+				if (c.indexOf(name) === 0) {
+					try {
+						const cookieValue = c.substring(name.length, c.length)
+						if (cookieValue) {
+							return JSON.parse(cookieValue)
+						}
+					} catch (e) {
+						console.error('Error parsing completedParts cookie:', e)
+						return []
+					}
+				}
 			}
-		})
+			return []
+		}
+
+		function setPartCompletedCookie(partNum) {
+			let completedParts = getCompletedPartsCookie()
+			if (!Array.isArray(completedParts)) {
+				completedParts = []
+			}
+			// Add entry only if this specific completion isn't already the very last one for this part (optional refinement)
+			// For now, strictly adheres to "never clear this list" and "keep track how many times" by always adding.
+			const newEntry = { part: partNum, ts: new Date().toISOString() }
+			completedParts.push(newEntry)
+			const cookieString =
+				'completedParts=' +
+				JSON.stringify(completedParts) +
+				';path=/;max-age=' +
+				60 * 60 * 24 * 365 * 5 +
+				';SameSite=Lax'
+			document.cookie = cookieString
+		}
+		// --- End Cookie Functions ---
 
 		let params = new URLSearchParams(document.location.search)
 		let partNumber = parseInt(params.get('part') || 1)
+		if (partNumber < 1 || partNumber > story.length || isNaN(partNumber)) {
+			// Validate partNumber
+			partNumber = 1
+		}
 		let partData = story[partNumber - 1]
 
 		if (!partData) {
-			// Fallback if partNumber is out of bounds
-			partData = story[0]
-			// Optionally, update URL or notify user
+			// Fallback if story is empty or partNumber still invalid
+			partNumber = 1
+			partData = story.length > 0 ? story[0] : null
+			if (partData) window.history.replaceState({ part: partNumber }, '', `?part=${partNumber}`)
 		}
 
-		startPart(partData)
-
 		function startPart(data) {
-			populateDictionary(data.definitions)
+			if (!data) {
+				questionNode.textContent = 'End of story or error loading part.'
+				partLabelToggle.textContent = 'Part ' + partNumber + ' ▶'
+				responseInput.disabled = true
+				checkButton.disabled = true
+				return
+			}
+			populateDictionary(data.definitions || [])
 			questionNode.textContent = data.sentence
-			partLabel.textContent = 'Part ' + partNumber
+			partLabelToggle.textContent = 'Part ' + partNumber + ' ▶'
 			correctAnswerInput.value = data.romanji
-			console.log(data)
-			englishAnswer.value = data.english
+			englishAnswer.value = data.english || ''
 
-			// Reset for new part
 			responseInput.value = ''
+			responseInput.disabled = false
+			checkButton.disabled = false
+			checkButton.hidden = false // Ensure check button is visible
 			highlightContainer.hidden = true
 			highlightBox.innerHTML = ''
 			answerBox.hidden = true
 			nextButton.hidden = true
 			englishBox.hidden = true
+			responseInput.focus()
 		}
+		startPart(partData) // Initial call
+
+		// --- Dictionary Logic ---
+		dictionaryToggleBtn.addEventListener('click', toggleDictionary)
+		closeDictionaryBtn.addEventListener('click', closeDictionary)
+
+		function toggleDictionary() {
+			if (dictionaryNode.open) closeDictionary()
+			else openDictionary()
+		}
+		function openDictionary() {
+			if (partsDialogNode.open) closePartsDialog() // Close other dialog
+			dictionaryNode.showModal()
+			dictionaryToggleBtn.innerHTML = '📖 &#9654;'
+		}
+		function closeDictionary() {
+			dictionaryNode.close()
+			dictionaryToggleBtn.innerHTML = '&#9664; 📖'
+		}
+		function populateDictionary(dict) {
+			const staticP = dictionaryListNode.querySelector('p.text-gray-600')
+			dictionaryListNode.innerHTML = ''
+			if (staticP) dictionaryListNode.appendChild(staticP)
+			if (!dict || dict.length === 0) {
+				const noDefsMessage = document.createElement('p')
+				noDefsMessage.textContent = 'No definitions for this part.'
+				noDefsMessage.classList.add('text-gray-500', 'italic')
+				dictionaryListNode.appendChild(noDefsMessage)
+				return
+			}
+			;[...dict]
+				.sort(() => Math.random() - 0.5)
+				.forEach((term) => {
+					const div = document.createElement('div')
+					div.classList.add('mb-4')
+					div.innerHTML = `<span><span class="text-2xl ">${term.jp}</span> <span class='italic'>${term.romanji}</span> (${term.meaning})</span>`
+					dictionaryListNode.appendChild(div)
+				})
+		}
+
+		// --- Parts Dialog Logic ---
+		partLabelToggle.addEventListener('click', togglePartsDialog)
+		closePartsDialogBtn.addEventListener('click', closePartsDialog)
+
+		function openPartsDialog() {
+			if (dictionaryNode.open) closeDictionary() // Close other dialog
+			currentPartInDialogTitle.textContent = 'Part ' + partNumber
+			populatePartsList()
+			partsDialogNode.showModal()
+		}
+		function closePartsDialog() {
+			partsDialogNode.close()
+		}
+		function togglePartsDialog() {
+			if (partsDialogNode.open) closePartsDialog()
+			else openPartsDialog()
+		}
+
+		function populatePartsList() {
+			partsListItemsContainer.innerHTML = '' // Clear existing items
+			const completedPartEntries = getCompletedPartsCookie()
+			const completedPartNumbers = new Set(completedPartEntries.map((entry) => entry.part))
+
+			for (let i = story.length; i >= 1; i--) {
+				// Descending order
+				const partIdxToList = i // This is the 1-indexed part number for the list item
+				const listItem = document.createElement('div')
+				listItem.textContent = `Part ${partIdxToList}`
+				listItem.classList.add(
+					'text-2xl',
+					'text-center',
+					'py-3',
+					'w-full',
+					'border-b',
+					'border-gray-200',
+					'last:border-b-0'
+				)
+
+				let isUnlocked = false
+				if (partIdxToList === 1) {
+					// Part 1 is always unlocked
+					isUnlocked = true
+				} else {
+					// Unlocked if the PREVIOUS part (partIdxToList - 1) has been completed
+					if (completedPartNumbers.has(partIdxToList - 1)) {
+						isUnlocked = true
+					}
+				}
+
+				if (isUnlocked) {
+					listItem.classList.add('cursor-pointer', 'hover:bg-gray-100', 'text-gray-800')
+					listItem.addEventListener('click', () => {
+						if (partNumber !== partIdxToList) {
+							// Only navigate if it's a different part
+							partNumber = partIdxToList
+							partData = story[partNumber - 1]
+							startPart(partData)
+							window.history.pushState({ part: partNumber }, '', `?part=${partNumber}`)
+						}
+						closePartsDialog()
+					})
+				} else {
+					listItem.classList.add('text-gray-400', 'cursor-not-allowed', 'opacity-60')
+				}
+				partsListItemsContainer.appendChild(listItem)
+			}
+		}
+
+		// --- Core Game Logic ---
+		nextButton.addEventListener('click', nextPart)
+		checkButton.addEventListener('click', checkAnswer)
+		responseInput.addEventListener('keypress', function (event) {
+			if (event.key === 'Enter') {
+				if (!checkButton.hidden) {
+					// If check is visible, click it
+					checkButton.click()
+				} else if (!nextButton.hidden) {
+					// If next is visible, click it
+					nextButton.click()
+				}
+			}
+		})
 
 		function revealAnswer() {
 			answerBox.hidden = false
 		}
 
 		function nextPart() {
-			// Make sure we aren't on the last part or in the negative part number for whatever reason
-			if (partNumber != story.length - 1 && partNumber >= 0) {
+			if (partNumber < story.length) {
 				partNumber += 1
 				partData = story[partNumber - 1]
 				startPart(partData)
+				window.history.pushState({ part: partNumber }, '', `?part=${partNumber}`)
+			} else {
+				questionNode.textContent = "Congratulations! You've completed all parts."
+				englishBox.hidden = true
+				answerBox.hidden = true
+				highlightContainer.hidden = true
+				nextButton.hidden = true
+				checkButton.hidden = true
+				responseInput.disabled = true
 			}
 		}
 
-		// --- Algorithm Selection ---
-		let currentAlgorithm = 'char-by-char' // Default
-
 		function splitSentences(text) {
 			if (!text || text.trim() === '') return []
-			const sentences = []
-			let currentSentenceStart = 0
-			for (let i = 0; i < text.length; i++) {
-				if (['.', '!', '?'].includes(text[i])) {
-					const sentence = text.substring(currentSentenceStart, i + 1).trim()
-					if (sentence.length > 0) {
-						sentences.push(sentence)
-					}
-					currentSentenceStart = i + 1
-				}
-			}
-			if (currentSentenceStart < text.length) {
-				const remainingSentence = text.substring(currentSentenceStart).trim()
-				if (remainingSentence.length > 0) {
-					sentences.push(remainingSentence)
-				}
-			}
-			if (sentences.length === 0 && text.trim() !== '') {
-				sentences.push(text.trim())
-			}
-			return sentences
+			// Simple split by sentence-ending punctuation, adjust if more complex rules needed
+			return text.match(/[^.!?]+[.!?]+/g) || [text.trim()]
 		}
 
 		function highlightSentenceCharacters(responseSentence, correctSentence) {
@@ -253,7 +439,7 @@
 
 			for (let i = 0; i < maxLength; i++) {
 				const span = document.createElement('span')
-				span.classList.add('char-highlight') // Apply base class for char spans
+				span.classList.add('char-highlight')
 				const resChar = resText[i]
 				const ansChar = ansText[i]
 
@@ -265,8 +451,9 @@
 						span.classList.add('incorrect')
 					}
 				} else {
+					// User's input is shorter
 					span.innerHTML = ansChar === ' ' ? '&nbsp;' : ansChar
-					span.classList.add('incorrect')
+					span.classList.add('incorrect') // Mark missing characters as incorrect
 				}
 				highlightedNodes.push(span)
 			}
@@ -274,117 +461,82 @@
 		}
 
 		function checkAnswer() {
+			if (!partData) return // No data to check against
 			let correctAnswerText = partData.romanji
 			let responseText = responseInput.value
-			highlightContainer.hidden = false
-			answerBox.hidden = true
 
-			console.log('adawdaw')
-			// Only do these checks if it's not a re-render from algo switch
+			highlightContainer.hidden = false // Show highlight area
+
 			if (!responseText || responseText.trim() === '') {
-				// Optional: Provide feedback for empty input if desired
-				// For now, just return as per original logic
-				highlightContainer.hidden = true
-				highlightBox.innerHTML = ''
+				highlightLabel.textContent = 'Please enter your answer.'
+				highlightBox.innerHTML = '' // Clear previous highlights
 				answerBox.hidden = true
-				// algoSelectorContainer.hidden = true; // Hide if input is empty
 				return
 			}
 
-			// When they right
-			if (correctAnswerText.toLowerCase() === responseText.toLowerCase()) {
+			const isCorrect = correctAnswerText.toLowerCase() === responseText.toLowerCase()
+
+			if (isCorrect) {
 				highlightLabel.textContent = 'Correct!'
-				highlightBox.hidden = false
 				englishBox.hidden = false
-				answerBox.hidden = true // No need to show correct answer if they got it right
-				// algoSelectorContainer.hidden = true; // Hide if correct
-				// Add logic for "next arrow" or progression here
+				answerBox.hidden = true
 				nextButton.hidden = false
-			}
-			// When they wrong
-			else {
+				setPartCompletedCookie(partNumber)
+			} else {
 				revealAnswer()
 				highlightLabel.textContent = "Something's not right..."
+				checkButton.hidden = false // Keep check button if wrong
+				nextButton.hidden = true
+				englishBox.hidden = true // Hide English if wrong, until they get it right or skip
 			}
 
-			// If wrong or a re-check
-			highlightBox.innerHTML = ''
-			highlightBox.hidden = false
-
+			highlightBox.innerHTML = '' // Clear previous highlights
 			let answerSentences = splitSentences(correctAnswerText)
 			let responseSentences = splitSentences(responseText)
-
 			const numTotalSentencesToDisplay = Math.max(answerSentences.length, responseSentences.length)
 
 			for (let i = 0; i < numTotalSentencesToDisplay; i++) {
-				const ansSentence = answerSentences[i]
-				const resSentence = responseSentences[i]
-
-				const currentResponseSentence = resSentence === undefined ? '' : resSentence
-				const currentCorrectSentence = ansSentence === undefined ? '' : ansSentence
-
-				// For Levenshtein, we'll just use char-by-char for visual, after showing info.
-				// if (currentAlgorithm === 'char-by-char' || currentAlgorithm === 'levenshtein') {
-				const sentenceNodes = highlightSentenceCharacters(
-					currentResponseSentence,
-					currentCorrectSentence
-				)
+				const ansSentence = answerSentences[i] || ''
+				const resSentence = responseSentences[i] || ''
+				const sentenceNodes = highlightSentenceCharacters(resSentence, ansSentence)
 				sentenceNodes.forEach((node) => highlightBox.appendChild(node))
-
-				// }
-
-				if (i < numTotalSentencesToDisplay - 1) {
-					if (currentResponseSentence.length > 0 || currentCorrectSentence.length > 0) {
-						const separator = document.createElement('span')
-						separator.innerHTML = '&nbsp;'
-						separator.classList.add('char-highlight') // Ensure it flows like other chars
-						highlightBox.appendChild(separator)
-					}
+				if (
+					i < numTotalSentencesToDisplay - 1 &&
+					(resSentence.length > 0 || ansSentence.length > 0)
+				) {
+					const separator = document.createElement('span')
+					separator.innerHTML = '&nbsp;' // Visual space between sentences
+					separator.classList.add('char-highlight')
+					highlightBox.appendChild(separator)
 				}
 			}
 		}
 
-		function toggleDictionary() {
-			if (dictionaryNode.open) {
-				closeDictionary()
-			} else {
-				openDictionary()
-			}
-		}
-		function openDictionary() {
-			dictionaryNode.showModal() // Or .show() if you prefer non-modal
-			dictionaryToggleBtn.innerHTML = '📖 &#9654;' // Book, Right arrow
-		}
-		function closeDictionary() {
-			dictionaryNode.close()
-			dictionaryToggleBtn.innerHTML = '&#9664; 📖' // Left arrow, book
-		}
-
-		function populateDictionary(dict) {
-			// Clear existing non-static content if any (e.g. if called multiple times)
-			const staticContent = dictionaryListNode.querySelector('p.text-gray-600')
-			dictionaryListNode.innerHTML = ''
-			if (staticContent) dictionaryListNode.appendChild(staticContent)
-			// Shuffle the dict so users don't memorize the order
-			dict.sort(() => Math.random() - 0.5)
-
-			dict.forEach((term) => {
-				const template = `<div class="mb-4"><span><span class="text-2xl ">${term.jp}</span> <span class='italic'>${term.romanji}</span> (${term.meaning})</span></div>`
-				const tempContainer = document.createElement('div')
-				tempContainer.innerHTML = template
-				const node = tempContainer.firstElementChild
-				dictionaryListNode.appendChild(node)
-			})
-		}
-
+		// Global click listener for closing dialogs
 		document.addEventListener('click', function (event) {
+			// Close Dictionary
 			if (
 				dictionaryNode.open &&
-				!dictionaryNode.firstElementChild.contains(event.target) && // Check against the dialog's content div
-				event.target !== dictionaryToggleBtn
+				!dictionaryNode.firstElementChild.contains(event.target) &&
+				event.target !== dictionaryToggleBtn &&
+				!dictionaryToggleBtn.contains(event.target)
 			) {
 				closeDictionary()
 			}
+			// Close Parts Dialog
+			if (
+				partsDialogNode.open &&
+				!partsDialogNode.firstElementChild.contains(event.target) &&
+				event.target !== partLabelToggle &&
+				!partLabelToggle.contains(event.target)
+			) {
+				closePartsDialog()
+			}
 		})
+
+		if (!nextButton.hidden) {
+			// On page load, if "Next" is visible (e.g. correct state retained), hide "Check"
+			checkButton.hidden = true
+		}
 	</script>
 </html>
